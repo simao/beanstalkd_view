@@ -15,7 +15,7 @@ module Beanstalk
       self.remove(c)
       raise ex
     end
-    
+
     def on_tube(tube, &block)
       response = nil
       connection_size = open_connections.size
@@ -36,8 +36,9 @@ module BeanstalkdView
 
   class Server < Sinatra::Base
     include BeanstalkdView::BeanstalkdUtils
-    helpers Sinatra::Cookies
-    
+    enable :sessions
+    register Sinatra::Flash
+
     root = File.dirname(File.expand_path(__FILE__))
     set :root, root
     set :views,  "#{root}/views"
@@ -47,7 +48,7 @@ module BeanstalkdView
           set :public, "#{root}/resources"
         end
     set :static, true
-      
+
     get "/" do
       begin
         @tubes = beanstalk.list_tubes
@@ -61,7 +62,7 @@ module BeanstalkdView
         erb :error
       end
     end
-    
+
     post "/add_job" do
       begin
         response = nil
@@ -70,17 +71,17 @@ module BeanstalkdView
           response = conn.put([ params[:tube], body ].to_json, params[:priority].to_i, params[:delay].to_i, params[:ttr].to_i)
         end
         if response
-          cookies[:beanstalkd_view_notice] = "Added job #{response.inspect}"
+          flash_message = "Added job #{response.inspect}"
           redirect url("/")
         else
-          cookies[:beanstalkd_view_notice] = "Error adding job"
+          flash_message = "Error adding job"
           redirect url("/")
         end
       rescue Beanstalk::NotConnected => @error
         erb :error
       end
     end
-    
+
     get "/tube/:tube" do
       begin
         @tube = params[:tube]
@@ -90,7 +91,7 @@ module BeanstalkdView
         erb :error
       end
     end
-    
+
     get "/peek/:tube/:type" do
       content_type :json
       begin
@@ -123,35 +124,35 @@ module BeanstalkdView
             response = conn.delete(params[:job_id].to_i)
           end
           if response
-            cookies[:beanstalkd_view_notice] = "Deleted Job #{params[:job_id]}"
+            flash_message = "Deleted Job #{params[:job_id]}"
             redirect url("/tube/#{params[:tube]}")
           else
-            cookies[:beanstalkd_view_notice] = "Error deleting Job #{params[:job_id]}"
+            flash_message = "Error deleting Job #{params[:job_id]}"
             redirect url("/tube/#{params[:tube]}")
           end
         rescue Beanstalk::NotConnected => @error
           erb :error
         end
     end
-    
+
     post "/pause" do
       begin
         response = beanstalk.pause_tube(params[:tube], params[:delay].to_i)
         if response
-          cookies[:beanstalkd_view_notice] = "Paused #{params[:tube]}. No jobs will be reserved for #{params[:delay].to_i} seconds."
+          flash_message = "Paused #{params[:tube]}. No jobs will be reserved for #{params[:delay].to_i} seconds."
           redirect url("/tube/#{params[:tube]}")
         else
-          cookies[:beanstalkd_view_notice] = "Error pausing #{params[:tube]}."
+          flash_message = "Error pausing #{params[:tube]}."
           redirect url("/tube/#{params[:tube]}")
         end
       rescue NameError => @error
-        cookies[:beanstalkd_view_notice] = "The pause_tube method is currently not implemented by this version of beanstalk-client."
+        flash_message = "The pause_tube method is currently not implemented by this version of beanstalk-client."
         redirect url("/tube/#{params[:tube]}")
       rescue Beanstalk::NotConnected => @error
         erb :error
       end
     end
-    
+
     post "/kick" do
       begin
         response = nil
@@ -159,17 +160,17 @@ module BeanstalkdView
           response = conn.kick(params[:bound].to_i)
         end
         if response
-          cookies[:beanstalkd_view_notice] = "Kicked #{params[:tube]} for #{response} jobs."
+          flash_message = "Kicked #{params[:tube]} for #{response} jobs."
           redirect url("/tube/#{params[:tube]}")
         else
-          cookies[:beanstalkd_view_notice] = "Error kicking #{params[:tube]}."
+          flash_message = "Error kicking #{params[:tube]}."
           redirect url("/tube/#{params[:tube]}")
         end
       rescue Beanstalk::NotConnected => @error
         erb :error
       end
     end
-    
+
     def url_path(*path_parts)
       [ path_prefix, path_parts ].join("/").squeeze('/')
     end
@@ -179,21 +180,29 @@ module BeanstalkdView
       request.env['SCRIPT_NAME']
     end
 
+    def flash_msg(msg)
+      flash(:bs)[:beanstalkd_view_notice]
+    end
+
+    def flash_msg=(msg)
+      flash(:bs)[:beanstalkd_view_notice] = msg
+    end
+
     def notice_message
-      message = cookies[:beanstalkd_view_notice]
-      cookies[:beanstalkd_view_notice] = ''
+      message = flash_message
+      flash_message = ''
       message
     end
 
     private
-        
+
     # Return the stats data in a format for the Bluff JS UI Charts
     def get_chart_data_hash(tube_set)
       chart_data = Hash.new
       chart_data["total_jobs_data"] = Hash.new
       chart_data["buried_jobs_data"] = Hash.new
       chart_data["total_jobs_data"]["items"] = Array.new
-      chart_data["buried_jobs_data"]["items"] = Array.new 
+      chart_data["buried_jobs_data"]["items"] = Array.new
       tube_set.each do |tube|
         begin
           stats = beanstalk.stats_tube(tube)
@@ -219,7 +228,7 @@ module BeanstalkdView
       end
       chart_data
     end
-    
+
     # Return a Set of tube names
     def tube_set(tubes)
       tube_set = Set.new
@@ -231,5 +240,5 @@ module BeanstalkdView
       tube_set
     end
 
-  end  
+  end
 end

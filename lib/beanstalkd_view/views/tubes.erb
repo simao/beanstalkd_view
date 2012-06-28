@@ -1,59 +1,93 @@
+<div class="row">
+  <div class="offset2 span8">
+    <h1>Tubes</h1>
+    
+    <table id="tubes-table" class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Ready</th>
+          <th>Reserved</th>
+          <th>Delayed</th>
+          <th>Total Jobs</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 
 <div class="row">
-	<div class="offset2 span8">
-      <h1>Tubes</h1>
+  <div class="offset2 span8">
+    <h1>Stats</h1>
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Ready</th>
-            <th>Reserved</th>
-            <th>Delayed</th>
-            <th>Total Jobs</th>
-          </tr>
-        </thead>
-        <tbody>
-	  <% @tubes.each do |name, tube| %>
-	    <tr>
-              <td><a href="<%= u("/tube/#{name}") %>"><%= name %></a></td>
-	      <td><%= tube['current-jobs-ready'] %></td>
-	      <td><%= tube['current-jobs-reserved'] %></td>
-	      <td><%= tube['current-jobs-delayed'] %></td>
-	      <td><%= tube['total-jobs'] %></td>
-	    </tr>
-	  <% end %>
-	</tbody>
-      </table>
-
-      </div>
+    <table id="workers-table" class="table">
+      <thead>
+        <tr>
+          <th>&nbsp;</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 
 
+<script language="javascript" type="text/javascript" src="<%= u('/js/tubes.js') %>"></script>
+
+<script language="javascript" type="text/javascript">
+  $(document).ready(function () {
+        var render_elements = {
+               tubes: {
+                        $table: $("#tubes-table"),
+                        template_id: "tube-row"
+                       },
+               workers: {
+                        $table: $("#workers-table"),
+                        template_id: "workers-row"
+                       }
+        };
+
+        var update_interval = 60; // Seconds
+
+
+        var update_func = App.fn.buildRefreshFunc(render_elements, $("#updated-at"),
+                          "<%= u('/api/tubes') %>");
+
+
+        $("#interval").text(update_interval);
+        setInterval(update_func, update_interval * 1000);
+        update_func();
+  });
+</script>
+
+<script id="tube-row" type="text/html">
+    <tr>
+      <td><a href='<%= u("/tube/") %>{{ name }}'>{{ name }}</a></td>
+      <td>{{ current-jobs-ready }}</td>
+      <td>{{ current-jobs-reserved }}</td>
+      <td>{{ current-jobs-delayed }}</td>
+      <td>{{ total-jobs }}</td>
+    </tr>
+</script>
+
+
+<script id="workers-row" type="text/html">
+  <tr>
+  <tr>
+    <td>{{ name }}</td>
+    <td>{{ value }}</td>
+  </tr>
+  </tr>
+</script>
+
 <div class="row">
-	<div class="offset2 span8">
-      <h1>Stats</h1>
-
-      <table class="table">
-        <thead>
-          <tr>
-            <th>&nbsp;</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-	  <tr>
-	    <td>Total Workers</td>
-	    <td><%= @workers[:total] %></td>
-	  </tr>
-	  <tr>
-	    <td>Active Workers</td>
-	    <td><%= @workers[:active] %></td>
-	  </tr>
-	</tbody>
-      </table>
-
-      </div>
+<div class="alert alert-info offset4 span4">
+  Automatically updated every <span id="interval">60</span> seconds.
+</div>
 </div>

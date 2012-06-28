@@ -117,6 +117,39 @@ module BeanstalkdView
       end
     end
 
+    get "/api/tubes" do
+      get_all_tubes_data.to_json
+    end
+
+    get "/tubes" do
+      tubes_stats = get_all_tubes_data
+
+      @tubes = tubes_stats[:tubes]
+      @stats = tubes_stats[:stats]
+      @workers = tubes_stats[:workers]
+
+      erb :tubes
+    end
+
+    def get_all_tubes_data
+      tubes_list = tube_set(beanstalk.list_tubes)
+
+      tubes = Hash[tubes_list.map { |tube| [tube, beanstalk.stats_tube(tube)] }]
+
+      stats = beanstalk.stats
+
+      workers = {
+        :active => tubes.values.map { |tube| tube['current-jobs-reserved'].to_i }.reduce(:+),
+        :total => stats['current-workers']
+      }
+
+      {
+        :tubes => tubes,
+        :stats => stats,
+        :workers => workers
+      }
+    end
+
     get "/delete/:tube/:job_id" do
        begin
           response = nil
@@ -180,11 +213,11 @@ module BeanstalkdView
       request.env['SCRIPT_NAME']
     end
 
-    def flash_msg(msg)
+    def flash_message
       flash(:bs)[:beanstalkd_view_notice]
     end
 
-    def flash_msg=(msg)
+    def flash_message=(msg)
       flash(:bs)[:beanstalkd_view_notice] = msg
     end
 

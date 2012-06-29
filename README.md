@@ -53,16 +53,7 @@ end
 Running from the command line
 ------------------------
 
-Run the beanstalkd_view executable, e.g.
-
-beanstalkd_view
-
-or from a Rails app:
-
-bundle exec beanstalkd_view
-
-
-(This will use the vegas gem to launch the Sinatra app on an available port.)
+Use rackup, shotgun or whatever.
 
 Screenshot
 ------------------------

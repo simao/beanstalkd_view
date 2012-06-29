@@ -131,25 +131,6 @@ module BeanstalkdView
       erb :tubes
     end
 
-    def get_all_tubes_data
-      tubes_list = tube_set(beanstalk.list_tubes)
-
-      tubes = Hash[tubes_list.map { |tube| [tube, beanstalk.stats_tube(tube)] }]
-
-      stats = beanstalk.stats
-
-      workers = {
-        :active => tubes.values.map { |tube| tube['current-jobs-reserved'].to_i }.reduce(:+),
-        :total => stats['current-workers']
-      }
-
-      {
-        :tubes => tubes,
-        :stats => stats,
-        :workers => workers
-      }
-    end
-
     get "/delete/:tube/:job_id" do
        begin
           response = nil
@@ -201,6 +182,33 @@ module BeanstalkdView
         end
       rescue Beanstalk::NotConnected => @error
         erb :error
+      end
+    end
+
+    get "/peeks" do
+      begin
+        tubes_list = tube_set(beanstalk.list_tubes)
+
+        @peeks = {}
+
+        tubes_list.each do |tube|
+          @peeks[tube] = {
+            :ready => peek_tube(tube, :ready),
+            :delayed => peek_tube(tube, :delayed)
+          }
+        end
+
+        erb :peeks
+      end
+    end
+
+    def peek_tube(name, type)
+      begin
+        beanstalk.on_tube(name) do |conn|
+          conn.send("peek_#{type.to_s}")
+        end
+      rescue Beanstalk::NotConnected => ex
+        ex.to_s
       end
     end
 
@@ -260,6 +268,25 @@ module BeanstalkdView
         end
       end
       chart_data
+    end
+
+    def get_all_tubes_data
+      tubes_list = tube_set(beanstalk.list_tubes)
+
+      tubes = Hash[tubes_list.map { |tube| [tube, beanstalk.stats_tube(tube)] }]
+
+      stats = beanstalk.stats
+
+      workers = {
+        :active => tubes.values.map { |tube| tube['current-jobs-reserved'].to_i }.reduce(:+),
+        :total => stats['current-workers']
+      }
+
+      {
+        :tubes => tubes,
+        :stats => stats,
+        :workers => workers
+      }
     end
 
     # Return a Set of tube names

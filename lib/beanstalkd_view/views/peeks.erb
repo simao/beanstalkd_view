@@ -1,0 +1,24 @@
+<div class="row">
+  <div class="span12">
+    <h1>Peek Jobs</h1>
+    
+    <table id="tubes-table" class="table">
+      <thead>
+        <tr>
+          <th>Tube Name</th>
+          <th>Ready</th>
+          <th>Delayed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @peeks.each do |tube, peek|  %>
+          <tr>
+            <td><%= tube %></td>
+            <td><%= peek[:ready] %></td>
+            <td><%= peek[:delayed] %></td>
+          </tr>          
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

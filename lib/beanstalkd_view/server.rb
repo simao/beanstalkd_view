@@ -293,7 +293,7 @@ module BeanstalkdView
     def tube_set(tubes)
       tube_set = Set.new
       tubes.keys.each do |key|
-        tubes[key].each do |tube|
+        tubes[key].sort.each do |tube|
           tube_set.add(tube)
         end
       end
